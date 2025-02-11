@@ -1,20 +1,12 @@
 const express = require("express");
 const connection = require("./db");
 const cors = require("cors");
-const twilio = require('twilio');
-
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-const accountSid = 'account_sid';
-const authToken = 'auth_token';
-
-const client = new twilio(accountSid, authToken);
-
 // Inicio
-
 
 /* Balance */
 app.get("/inicio/balance", (req, res) => {
@@ -2326,7 +2318,6 @@ app.post("/creditos/ventas-agregar", (req, res) => {
 
 // login
 
-
 app.post("/api/login", (req, res) => {
   const { usuario, contrasena } = req.body;
 
@@ -2341,7 +2332,20 @@ app.post("/api/login", (req, res) => {
 
     if (results.length > 0) {
       const user = results[0];
-      res.json({ success: true, id: user.id, rol_id: user.rol_id }); 
+
+      let redirectRoute = "/";
+      if (user.rol_id === 1) {
+        redirectRoute = "/main/inicio";
+      } else if (user.rol_id === 2) {
+        redirectRoute = "/main/ventas";
+      }
+
+      res.json({
+        success: true,
+        id: user.id,
+        rol_id: user.rol_id,
+        redirectRoute,
+      });
     } else {
       res
         .status(401)
@@ -2378,29 +2382,82 @@ app.get("/api/datos-usuarios/:id", (req, res) => {
   });
 });
 
-/* Autenticación 2FA */
-app.post("/api/send-2FA", (req, res) => {
-  const { userId, phoneNumber } = req.body;
+/* Generación secreto TOTP */
 
-  if (!userId || !phoneNumber) {
-    return res.status(400).json({ success: false, message: "Datos incompletos" });
+app.post("/api/generate-2FA-key", (req, res) => {
+  const { userId } = req.body;
+
+  if (!userId) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Datos incompletos" });
   }
 
-  // Simulación de envío del código (puedes integrar Twilio u otro servicio)
-  const code = Math.floor(100000 + Math.random() * 900000); // Código de 6 dígitos
-  console.log(`Código 2FA para ${phoneNumber}: ${code}`);
+  /* Generar un key TOTP */
+  const secret = speakeasy.generateSecret({ length: 20 });
 
-  // Aquí deberías almacenar el código en la base de datos asociado al usuario
-  const query = "UPDATE usuarios SET codigo_2FA = ? WHERE id = ?";
-  connection.query(query, [code, userId], (error) => {
+  /* Guardar el secret key en la base de datos */
+  const query = "UPDATE usuarios SET secret_2FA = ? WHERE id = ?";
+  connection.query(query, [secret.base32, userId], (error) => {
     if (error) {
-      console.error("Error en la actualización 2FA:", error);
-      return res.status(500).json({ success: false, message: "Error en el servidor" });
+      console.error("Error al guardar la autenticación 2FA: ", error);
+      return res
+        .status(500)
+        .json({ success: false, message: "Error en el serviodr" });
     }
-    res.json({ success: true });
+
+    /* Devolvemos el secreto y la URL para el code QR */
+    res.json({
+      success: true,
+      secret: secret.base32,
+      otpauthURL: secret.otpauthURL,
+    });
   });
 });
 
+/* Verificar code TOTP */
+app.post("/api/verify-2FA", (req, res) => {
+  const { userId, token } = req.body;
+
+  if (!userId || !token) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Datos incompletos" });
+  }
+
+  /* Obtenemos el secreto del user desde la base de datos  */
+  const query = "SELECT secret_2FA FROM usuarios WHERE id = ?";
+  connection.query(query, [userId], (error, results) => {
+    if (error) {
+      console.error("Error al obtner el secreto 2FA: ", error);
+      return res
+        .status(500)
+        .json({ success: false, message: "Error en el servidor" });
+    }
+
+    if (results.length === 0) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Usuario no encontrado" });
+    }
+
+    const secret = results[0].secret_2FA;
+
+    /* Verificar el code TOTP */
+    const isValid = speakeasy.top.verify({
+      secret: secret,
+      encoding: "base32",
+      token: token,
+      window: 1,
+    });
+
+    if (isValid) {
+      res.status({ success: true, message: "Código valido" });
+    } else {
+      res.status(401).json({ success: false, message: "Código invalido" });
+    }
+  });
+});
 
 // Municipio
 
