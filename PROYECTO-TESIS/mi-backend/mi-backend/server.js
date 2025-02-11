@@ -8,6 +8,72 @@ app.use(express.json());
 
 // Inicio
 
+// login
+
+app.post("/api/login", (req, res) => {
+  const { usuario, contrasena } = req.body;
+
+  const query = "SELECT * FROM usuarios WHERE usuario = ? AND contrasena = ?";
+  connection.query(query, [usuario, contrasena], (error, results) => {
+    if (error) {
+      console.error("Error en la consulta SQL:", error);
+      return res
+        .status(500)
+        .json({ success: false, message: "Error en el servidor" });
+    }
+
+    if (results.length > 0) {
+      const user = results[0];
+
+      let redirectRoute = "/";
+      if (user.rol_id === 1) {
+        redirectRoute = "/main/inicio";
+      } else if (user.rol_id === 2) {
+        redirectRoute = "/main/ventas";
+      }
+
+      res.json({
+        success: true,
+        id: user.id,
+        rol_id: user.rol_id,
+        redirectRoute,
+      });
+    } else {
+      res
+        .status(401)
+        .json({ success: false, message: "Usuario o contrasena incorrectos" });
+    }
+  });
+});
+
+/* Ruta para obtener datos de los usuarios */
+app.get("/api/datos-usuarios/:id", (req, res) => {
+  const userId = req.params.id;
+  const query = `
+    SELECT 
+        u.id,
+        r.nombre AS rol,
+        u.nombre,
+        u.usuario,
+        u.contrasena
+    FROM 
+        usuarios u
+    JOIN 
+        rol r ON u.rol_id = r.id
+    WHERE 
+        u.id = ?;
+  `;
+
+  connection.query(query, [userId], (error, results) => {
+    if (error) {
+      return res
+        .status(500)
+        .json({ error: "Error al obtener los datos del usuario" });
+    }
+    res.json(results[0]);
+  });
+});
+
 /* Balance */
 app.get("/inicio/balance", (req, res) => {
   const query = `
@@ -2316,72 +2382,6 @@ app.post("/creditos/ventas-agregar", (req, res) => {
   });
 });
 
-// login
-
-app.post("/api/login", (req, res) => {
-  const { usuario, contrasena } = req.body;
-
-  const query = "SELECT * FROM usuarios WHERE usuario = ? AND contrasena = ?";
-  connection.query(query, [usuario, contrasena], (error, results) => {
-    if (error) {
-      console.error("Error en la consulta SQL:", error);
-      return res
-        .status(500)
-        .json({ success: false, message: "Error en el servidor" });
-    }
-
-    if (results.length > 0) {
-      const user = results[0];
-
-      let redirectRoute = "/";
-      if (user.rol_id === 1) {
-        redirectRoute = "/main/inicio";
-      } else if (user.rol_id === 2) {
-        redirectRoute = "/main/ventas";
-      }
-
-      res.json({
-        success: true,
-        id: user.id,
-        rol_id: user.rol_id,
-        redirectRoute,
-      });
-    } else {
-      res
-        .status(401)
-        .json({ success: false, message: "Usuario o contrasena incorrectos" });
-    }
-  });
-});
-
-/* Ruta para obtener datos de los usuarios */
-app.get("/api/datos-usuarios/:id", (req, res) => {
-  const userId = req.params.id;
-  const query = `
-    SELECT 
-        u.id,
-        r.nombre AS rol,
-        u.nombre,
-        u.usuario,
-        u.contrasena
-    FROM 
-        usuarios u
-    JOIN 
-        rol r ON u.rol_id = r.id
-    WHERE 
-        u.id = ?;
-  `;
-
-  connection.query(query, [userId], (error, results) => {
-    if (error) {
-      return res
-        .status(500)
-        .json({ error: "Error al obtener los datos del usuario" });
-    }
-    res.json(results[0]);
-  });
-});
-
 /* Generación secreto TOTP */
 
 app.post("/api/generate-2FA-key", (req, res) => {
@@ -2393,29 +2393,47 @@ app.post("/api/generate-2FA-key", (req, res) => {
       .json({ success: false, message: "Datos incompletos" });
   }
 
-  /* Generar un key TOTP */
-  const secret = speakeasy.generateSecret({ length: 20 });
-
-  /* Guardar el secret key en la base de datos */
-  const query = "UPDATE usuarios SET secret_2FA = ? WHERE id = ?";
-  connection.query(query, [secret.base32, userId], (error) => {
+  /* Verificar si el usuario existe */
+  const checkUserQuery = "SELECT id FROM usuarios WHERE id = ?";
+  connection.query(checkUserQuery, [userId], (error, results) => {
     if (error) {
-      console.error("Error al guardar la autenticación 2FA: ", error);
+      console.error("Error al verificar el usuario: ", error);
       return res
         .status(500)
-        .json({ success: false, message: "Error en el serviodr" });
+        .json({ success: false, message: "Error en el servidor" });
     }
 
-    /* Devolvemos el secreto y la URL para el code QR */
-    res.json({
-      success: true,
-      secret: secret.base32,
-      otpauthURL: secret.otpauthURL,
+    if (results.length === 0) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Usuario no encontrado" });
+    }
+
+    /* Generar el secreto TOTP */
+    const secret = speakeasy.generateSecret({ length: 20 });
+
+    /* Guardar el secreto en la base de datos */
+    const updateQuery = "UPDATE usuarios SET secret_2FA = ? WHERE id = ?";
+    connection.query(updateQuery, [secret.base32, userId], (error) => {
+      if (error) {
+        console.error("Error al guardar la autenticación 2FA: ", error);
+        return res
+          .status(500)
+          .json({ success: false, message: "Error en el servidor" });
+      }
+
+      /* Devolver el secreto y la URL para el código QR */
+      res.json({
+        success: true,
+        secret: secret.base32,
+        otpauthURL: secret.otpauthURL,
+      });
     });
   });
 });
 
 /* Verificar code TOTP */
+
 app.post("/api/verify-2FA", (req, res) => {
   const { userId, token } = req.body;
 
@@ -2425,11 +2443,11 @@ app.post("/api/verify-2FA", (req, res) => {
       .json({ success: false, message: "Datos incompletos" });
   }
 
-  /* Obtenemos el secreto del user desde la base de datos  */
+  /* Obtener el secreto del usuario */
   const query = "SELECT secret_2FA FROM usuarios WHERE id = ?";
   connection.query(query, [userId], (error, results) => {
     if (error) {
-      console.error("Error al obtner el secreto 2FA: ", error);
+      console.error("Error al obtener el secreto 2FA: ", error);
       return res
         .status(500)
         .json({ success: false, message: "Error en el servidor" });
@@ -2443,18 +2461,18 @@ app.post("/api/verify-2FA", (req, res) => {
 
     const secret = results[0].secret_2FA;
 
-    /* Verificar el code TOTP */
-    const isValid = speakeasy.top.verify({
+    /* Verificar el código TOTP */
+    const isValid = speakeasy.totp.verify({
       secret: secret,
       encoding: "base32",
       token: token,
-      window: 1,
+      window: 1 /* Permite un margen de 1 token anterior/posterior */,
     });
 
     if (isValid) {
-      res.status({ success: true, message: "Código valido" });
+      res.json({ success: true, message: "Código válido" });
     } else {
-      res.status(401).json({ success: false, message: "Código invalido" });
+      res.status(401).json({ success: false, message: "Código inválido" });
     }
   });
 });
