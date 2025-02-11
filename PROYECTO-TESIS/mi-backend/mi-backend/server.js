@@ -1,78 +1,20 @@
 const express = require("express");
 const connection = require("./db");
 const cors = require("cors");
-const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
-const nodemailer = require("nodemailer");
+const twilio = require('twilio');
+
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
+const accountSid = 'account_sid';
+const authToken = 'auth_token';
+
+const client = new twilio(accountSid, authToken);
+
 // Inicio
 
-/* Login */
-
-/* app.post("/api/login", async (req, res) => {
-  const { usuario, contrasena } = req.body;
-
-  try {
-    // Buscar al usuario en la base de datos
-    const query = "SELECT * FROM usuarios WHERE usuario = ?";
-    connection.query(query, [usuario], async (error, results) => {
-      if (error) {
-        console.error("Error en la consulta SQL:", error);
-        return res.status(500).json({ success: false, message: "Error en el servidor" });
-      }
-
-      if (results.length === 0) {
-        return res.status(401).json({ success: false, message: "Usuario o contraseña incorrectos" });
-      }
- */
-/*   const user = results[0]; */
-
-// Verificar la contraseña encriptada
-/*  const match = await bcrypt.compare(contrasena, user.contrasena);
-      if (!match) {
-        return res.status(401).json({ success: false, message: "Usuario o contraseña incorrectos" });
-      } */
-
-// Generar un código de 2FA
-/* const twoFACode = Math.floor(100000 + Math.random() * 900000); */ // Código de 6 dígitos
-/* const twoFAExpiration = Date.now() + 5 * 60 * 1000; */ // Expira en 5 minutos
-
-// Guardar el código de 2FA en la base de datos
-/*    const updateQuery = "UPDATE usuarios SET two_fa_code = ?, two_fa_expiration = ? WHERE id = ?";
-      connection.query(updateQuery, [twoFACode, twoFAExpiration, user.id], (error) => {
-        if (error) {
-          console.error("Error al guardar el código 2FA:", error);
-          return res.status(500).json({ success: false, message: "Error en el servidor" });
-        } */
-
-/* Enviar el código 2FA por correo */
-/*   const mailOptions = {
-          from: 'tucorreo@gmail.com',
-          to: user.email,
-          subject: 'Código de verificación 2FA',
-          text: `Tu código de verificación es: ${twoFACode}`,
-        }; */
-
-/*  transporter.sendMail(mailOptions, (error) => {
-          if (error) {
-            console.error("Error al enviar el correo:", error);
-            return res.status(500).json({ success: false, message: "Error al enviar el código 2FA" });
-          }
-
-          res.json({ success: true, message: "Código 2FA enviado", userId: user.id });
-        });
-      });
-    });
-  } catch (error) {
-    console.error("Error en el login:", error);
-    res.status(500).json({ success: false, message: "Error en el servidor" });
-  }
-});
- */
 
 /* Balance */
 app.get("/inicio/balance", (req, res) => {
@@ -2384,7 +2326,7 @@ app.post("/creditos/ventas-agregar", (req, res) => {
 
 // login
 
-/* Ruta para el login */
+
 app.post("/api/login", (req, res) => {
   const { usuario, contrasena } = req.body;
 
@@ -2399,7 +2341,7 @@ app.post("/api/login", (req, res) => {
 
     if (results.length > 0) {
       const user = results[0];
-      res.json({ success: true, id: user.id, rol_id: user.rol_id }); // Devuelve el ID y el rol_id del usuario
+      res.json({ success: true, id: user.id, rol_id: user.rol_id }); 
     } else {
       res
         .status(401)
@@ -2432,9 +2374,33 @@ app.get("/api/datos-usuarios/:id", (req, res) => {
         .status(500)
         .json({ error: "Error al obtener los datos del usuario" });
     }
-    res.json(results[0]); // Retorna solo el primer resultado
+    res.json(results[0]);
   });
 });
+
+/* Autenticación 2FA */
+app.post("/api/send-2FA", (req, res) => {
+  const { userId, phoneNumber } = req.body;
+
+  if (!userId || !phoneNumber) {
+    return res.status(400).json({ success: false, message: "Datos incompletos" });
+  }
+
+  // Simulación de envío del código (puedes integrar Twilio u otro servicio)
+  const code = Math.floor(100000 + Math.random() * 900000); // Código de 6 dígitos
+  console.log(`Código 2FA para ${phoneNumber}: ${code}`);
+
+  // Aquí deberías almacenar el código en la base de datos asociado al usuario
+  const query = "UPDATE usuarios SET codigo_2FA = ? WHERE id = ?";
+  connection.query(query, [code, userId], (error) => {
+    if (error) {
+      console.error("Error en la actualización 2FA:", error);
+      return res.status(500).json({ success: false, message: "Error en el servidor" });
+    }
+    res.json({ success: true });
+  });
+});
+
 
 // Municipio
 
