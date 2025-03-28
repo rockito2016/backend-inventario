@@ -28,7 +28,7 @@ const authMiddleware = (req, res, next) => {
   });
 };
 
-function authorize(roles = []) {
+/* function authorize(roles = []) {
   if (typeof roles === "string") {
     roles = [roles];
   }
@@ -50,7 +50,7 @@ function authorize(roles = []) {
       res.status(401).send("Token sin proveer");
     }
   };
-}
+} */
 
 Chart.register(ChartDataLabels);
 
