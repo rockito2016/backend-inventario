@@ -20,9 +20,9 @@ const corsOptions = {
   optionsSuccessStatus: 204,
 };
 app.use(cors(corsOptions));
+
 app.use(express.json());
-const SECRET_KEY =
-  "078e61ddf7838590981558fbe12e7ca5a101095f7d7d84975fb26d4892e0ee83a7a8de0b7e0b62bf14ca9787f516c7810dfbe8930f781275e78d38e0457ac5a5";
+const SECRET_KEY = process.env.SECRET_KEY;
 
 /* Middleware para proteger las rutas */
 const authMiddleware = (req, res, next) => {
