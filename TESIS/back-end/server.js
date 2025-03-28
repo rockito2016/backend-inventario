@@ -2,7 +2,7 @@ const express = require("express");
 const connection = require("./db");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const sharp = require('sharp');
+const sharp = require("sharp");
 
 const cors = require("cors");
 const { ChartJSNodeCanvas } = require("chartjs-node-canvas");
@@ -11,7 +11,14 @@ const ChartDataLabels = require("chartjs-plugin-datalabels");
 const { Chart } = require("chart.js");
 
 const app = express();
-app.use(cors());
+app.use(
+  cors({
+    origin:
+      "frontend-inventario-a5qw2c3l2-javier-pascuaza-s-projects.vercel.app",
+    methods: "GET,POST,PUT,DELETE,OPTIONS",
+    allowedHeaders: "Content-Type,Authorization",
+  })
+);
 app.use(express.json());
 const SECRET_KEY =
   "078e61ddf7838590981558fbe12e7ca5a101095f7d7d84975fb26d4892e0ee83a7a8de0b7e0b62bf14ca9787f516c7810dfbe8930f781275e78d38e0457ac5a5";
