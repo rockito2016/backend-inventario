@@ -11,15 +11,15 @@ const ChartDataLabels = require("chartjs-plugin-datalabels");
 const { Chart } = require("chart.js");
 
 const app = express();
-/* app.use(cors()); */
-const corsOptions = {
+app.use(cors());
+/* const corsOptions = {
   origin: "https://frontend-inventario-blond.vercel.app",
   methods: "GET,PUT,POST,DELETE,HEAD,PATCH",
   credentials: true,
   allowedHeaders: ["Content-Type", "Authorization"],
   optionsSuccessStatus: 204,
 };
-app.use(cors(corsOptions));
+app.use(cors(corsOptions)); */
 
 app.use(express.json());
 const SECRET_KEY = process.env.SECRET_KEY;
