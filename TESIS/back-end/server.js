@@ -2,6 +2,7 @@ const express = require("express");
 const connection = require("./db");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const sharp = require('sharp');
 
 const cors = require("cors");
 const { ChartJSNodeCanvas } = require("chartjs-node-canvas");
@@ -65,9 +66,9 @@ const chartJSNodeCanvas = new ChartJSNodeCanvas({
 // Ruta para obtener el gráfico doble de ventas por forma de pago
 app.get("/grafico-doble", async (req, res) => {
   const query = `
-    SELECT fecha, total, forma_pago_id 
+    SELECT fecha, total, forma_pago_id
     FROM venta_general
-    WHERE MONTH(fecha) = MONTH(CURRENT_DATE) 
+    WHERE MONTH(fecha) = MONTH(CURRENT_DATE)
     AND YEAR(fecha) = YEAR(CURRENT_DATE)
     ORDER BY fecha ASC;
   `;
@@ -129,35 +130,25 @@ app.get("/grafico-doble", async (req, res) => {
             },
             formatter: (value, context) => {
               if (value === 0) return "";
-
               const index = context.dataIndex;
               const totalPoints = context.dataset.data.length;
-
               if (index === 0) return `$ ${value.toLocaleString("es-ES")}`;
-
               if (index === totalPoints - 1)
                 return `$ ${value.toLocaleString("es-ES")}`;
-
               return `$ ${value.toLocaleString("es-ES")}`;
             },
             anchor: (context) => {
               const index = context.dataIndex;
               const totalPoints = context.dataset.data.length;
-
               if (index === 0) return "start";
-
               if (index === totalPoints - 1) return "end";
-
               return "end";
             },
             align: (context) => {
               const index = context.dataIndex;
               const totalPoints = context.dataset.data.length;
-
               if (index === 0) return "right";
-
               if (index === totalPoints - 1) return "left";
-
               return "top";
             },
           },
@@ -179,7 +170,23 @@ app.get("/grafico-doble", async (req, res) => {
       },
     };
 
-    const image = await chartJSNodeCanvas.renderToBuffer(configuration);
+    const image = await sharp({
+      create: {
+        width: 1200,
+        height: 600,
+        channels: 4,
+        background: { r: 255, g: 255, b: 255, alpha: 1 },
+      },
+    })
+      .composite([
+        {
+          input: await chartJSNodeCanvas.renderToBuffer(configuration),
+          top: 0,
+          left: 0,
+        },
+      ])
+      .png()
+      .toBuffer();
 
     res.set("Content-Type", "image/png");
     res.send(image);
@@ -273,7 +280,23 @@ app.get("/grafico-barras", async (req, res) => {
       },
     };
 
-    const image = await chartJSNodeCanvas.renderToBuffer(configuration);
+    const image = await sharp({
+      create: {
+        width: 1200,
+        height: 600,
+        channels: 4,
+        background: { r: 255, g: 255, b: 255, alpha: 1 },
+      },
+    })
+      .composite([
+        {
+          input: await chartJSNodeCanvas.renderToBuffer(configuration),
+          top: 0,
+          left: 0,
+        },
+      ])
+      .png()
+      .toBuffer();
 
     res.set("Content-Type", "image/png");
     res.send(image);
@@ -375,7 +398,23 @@ app.get("/grafico-barras-categorias", async (req, res) => {
       },
     };
 
-    const image = await chartJSNodeCanvas.renderToBuffer(configuration);
+    const image = await sharp({
+      create: {
+        width: 1200,
+        height: 600,
+        channels: 4,
+        background: { r: 255, g: 255, b: 255, alpha: 1 },
+      },
+    })
+      .composite([
+        {
+          input: await chartJSNodeCanvas.renderToBuffer(configuration),
+          top: 0,
+          left: 0,
+        },
+      ])
+      .png()
+      .toBuffer();
 
     res.set("Content-Type", "image/png");
     res.send(image);
@@ -481,7 +520,23 @@ app.get("/grafico-barras-proveedores", async (req, res) => {
       plugins: [ChartDataLabels],
     };
 
-    const image = await chartJSNodeCanvas.renderToBuffer(configuration);
+    const image = await sharp({
+      create: {
+        width: 1200,
+        height: 600,
+        channels: 4,
+        background: { r: 255, g: 255, b: 255, alpha: 1 },
+      },
+    })
+      .composite([
+        {
+          input: await chartJSNodeCanvas.renderToBuffer(configuration),
+          top: 0,
+          left: 0,
+        },
+      ])
+      .png()
+      .toBuffer();
 
     res.set("Content-Type", "image/png");
     res.send(image);
