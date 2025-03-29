@@ -1,1 +1,19 @@
 .vercel
+# Ignorar directorios del sistema
+Configuración local/
+Cookies/
+Datos de programa/
+Entorno de red/
+Impresoras/
+Menú Inicio/
+Mis documentos/
+Plantillas/
+Reciente/
+SendTo/
+
+# Ignorar archivos de configuración y caché
+.vscode/
+.cache/
+.config/
+.idea/
+node_modules/
