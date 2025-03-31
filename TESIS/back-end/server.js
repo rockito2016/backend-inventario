@@ -3327,9 +3327,7 @@ app.post("/api/login", (req, res) => {
             } else if (user.rol_id === 2) {
               allowedRoutes = [
                 "/main/ventas",
-                "/main/inventario/stock-minimo",
-                "/main/inventario/lista-precios",
-                "/main/inventario/proximos-vencer",
+                "/main/inventario",
                 "/main/contactos/clientes",
                 "/main/creditos/creditos-ventas",
               ];
