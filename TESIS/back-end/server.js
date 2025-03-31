@@ -2,7 +2,7 @@ const express = require("express");
 const connection = require("./db");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const sharp = require('sharp');
+const sharp = require("sharp");
 
 const cors = require("cors");
 const { ChartJSNodeCanvas } = require("chartjs-node-canvas");
@@ -11,15 +11,15 @@ const ChartDataLabels = require("chartjs-plugin-datalabels");
 const { Chart } = require("chart.js");
 
 const app = express();
-app.use(cors());
-/* const corsOptions = {
-  origin: "https://frontend-inventario-blond.vercel.app",
-  methods: "GET,PUT,POST,DELETE,HEAD,PATCH",
-  credentials: true,
-  optionsSuccessStatus: 204,
+const corsOptions = {
+  origin: ["https://distribuidorasanfrancisco.netlify.app"],
+  methods: "GET,POST,PUT,DELETE",
+  allowedHeaders: "Content-Type, Authorization",
 };
-app.use(cors(corsOptions)); */
+
+app.use(cors(corsOptions));
 app.use(express.json());
+
 const SECRET_KEY =
   "078e61ddf7838590981558fbe12e7ca5a101095f7d7d84975fb26d4892e0ee83a7a8de0b7e0b62bf14ca9787f516c7810dfbe8930f781275e78d38e0457ac5a5";
 
@@ -35,30 +35,6 @@ const authMiddleware = (req, res, next) => {
     next();
   });
 };
-
-/* function authorize(roles = []) {
-  if (typeof roles === "string") {
-    roles = [roles];
-  }
-
-  return (req, res, next) => {
-    const token = req.headers["authorization"];
-    if (token) {
-      jwt.verify(token, "SECRET_KEY", (err, decoded) => {
-        if (err) {
-          return res.status(403).send("Token inválido");
-        }
-        if (roles.length && !roles.includes(decoded.role)) {
-          return res.status(403).send("Access denied");
-        }
-        req.user = decoded;
-        next();
-      });
-    } else {
-      res.status(401).send("Token sin proveer");
-    }
-  };
-} */
 
 Chart.register(ChartDataLabels);
 
@@ -3505,6 +3481,8 @@ app.get("/api/transportador/:id", (req, res) => {
 
 // Inicio del servidor
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+const HOST = "0.0.0.0";
+app.listen(PORT, HOST, () => {
   console.log(`Servidor escuchando en el puerto http://localhost:${PORT}`);
+  console.log(`➡️ Producción: https://distribuidorasanfrancisco.netlify.app`);
 });
