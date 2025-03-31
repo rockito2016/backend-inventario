@@ -11,13 +11,14 @@ const ChartDataLabels = require("chartjs-plugin-datalabels");
 const { Chart } = require("chart.js");
 
 const app = express();
-const corsOptions = {
+/* const corsOptions = {
   origin: ["https://distribuidorasanfrancisco.netlify.app"],
   methods: "GET,POST,PUT,DELETE",
   allowedHeaders: "Content-Type, Authorization",
 };
 
-app.use(cors(corsOptions));
+app.use(cors(corsOptions)); */
+app.use(cors());
 app.use(express.json());
 
 const SECRET_KEY =
@@ -3283,55 +3284,86 @@ app.post("/api/register", (req, res) => {
 // Ruta para el inicio de sesión
 app.post("/api/login", (req, res) => {
   const { usuario, contrasena } = req.body;
-
   console.log("Datos recibidos en login:", usuario, contrasena);
+  try {
+    const query = "SELECT * FROM usuarios WHERE usuario = ?";
+    connection.query(query, [usuario], (error, results) => {
+      if (error) {
+        console.error("Error en la consulta SQL:", error);
+        return res.status(500).json({
+          success: false,
+          message: "Error en el servidor",
+          error: error.message,
+        });
+      }
+      console.log("Resultados de la consulta:", results);
+      if (results.length > 0) {
+        const user = results[0];
 
-  const query = "SELECT * FROM usuarios WHERE usuario = ?";
-  connection.query(query, [usuario], (error, results) => {
-    if (error) {
-      console.error("Error en la consulta SQL:", error);
-      return res
-        .status(500)
-        .json({ success: false, message: "Error en el servidor" });
-    }
+        console.log("Contraseña en la base de datos:", user.contrasena);
 
-    console.log("Resultados de la consulta:", results);
+        bcrypt.compare(contrasena, user.contrasena, (err, isMatch) => {
+          if (err) {
+            console.error("Error al comparar contraseñas:", err);
+            return res.status(500).json({
+              success: false,
+              message: "Error en el servidor",
+              error: err.message,
+            });
+          }
 
-    if (results.length > 0) {
-      const user = results[0];
+          console.log("¿Contraseña válida?", isMatch);
 
-      console.log("Contraseña en la base de datos:", user.contrasena);
+          if (isMatch) {
+            const token = jwt.sign(
+              { id: user.id, role: user.rol_id },
+              SECRET_KEY,
+              { expiresIn: "1h" }
+            );
 
-      bcrypt.compare(contrasena, user.contrasena, (err, isMatch) => {
-        if (err) {
-          console.error("Error al comparar contraseñas:", err);
-          return res
-            .status(500)
-            .json({ success: false, message: "Error en el servidor" });
-        }
+            let allowedRoutes = [];
+            if (user.rol_id === 1) {
+              allowedRoutes = ["/main/inicio"];
+            } else if (user.rol_id === 2) {
+              allowedRoutes = [
+                "/main/ventas",
+                "/main/inventario/stock-minimo",
+                "/main/inventario/lista-precios",
+                "/main/inventario/proximos-vencer",
+                "/main/contactos/clientes",
+                "/main/creditos/creditos-ventas",
+              ];
+            }
 
-        console.log("¿Contraseña válida?", isMatch);
-
-        if (isMatch) {
-          const token = jwt.sign(
-            { id: user.id, role: user.rol_id },
-            SECRET_KEY,
-            { expiresIn: "1h" }
-          );
-          res.json({ success: true, token, id: user.id, rol_id: user.rol_id });
-        } else {
-          res.status(401).json({
-            success: false,
-            message: "Usuario o contraseña incorrectos",
-          });
-        }
-      });
-    } else {
-      res
-        .status(401)
-        .json({ success: false, message: "Usuario o contraseña incorrectos" });
-    }
-  });
+            res.json({
+              success: true,
+              token,
+              id: user.id,
+              rol_id: user.rol_id,
+              allowedRoutes,
+            });
+          } else {
+            res.status(401).json({
+              success: false,
+              message: "Usuario o contraseña incorrectos",
+            });
+          }
+        });
+      } else {
+        res.status(401).json({
+          success: false,
+          message: "Usuario o contraseña incorrectos",
+        });
+      }
+    });
+  } catch (error) {
+    console.error("Error no controlado en /api/login:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error en el servidor",
+      error: error.message,
+    });
+  }
 });
 
 // Ruta para obtener los roles
