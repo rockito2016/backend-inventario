@@ -198,15 +198,12 @@ app.get("/grafico-barras", async (req, res) => {
 
     const labels = results.map((row) => row.subcategoria);
     const data = results.map((row) => row.total);
-
-    const colors = [
-      "#FF6384",
-      "#36A2EB",
-      "#FFCE56",
-      "#4BC0C0",
-      "#9966FF",
-      "#E7E9ED",
-    ];
+    const generateGradient = (ctx, height, color1, color2) => {
+      const gradient = ctx.createLinearGradient(0, 0, 0, height);
+      gradient.addColorStop(0, color1);
+      gradient.addColorStop(1, color2);
+      return gradient;
+    };
 
     const configuration = {
       type: "bar",
@@ -216,48 +213,88 @@ app.get("/grafico-barras", async (req, res) => {
           {
             label: "Ventas por Subcategoría",
             data: data,
-            backgroundColor: colors,
-            borderColor: "#fff",
+            backgroundColor: (ctx) => {
+              const chart = ctx.chart;
+              const { ctx: chartCtx, chartArea } = chart;
+
+              if (!chartArea) {
+                return "#4BC0C0";
+              }
+
+              return generateGradient(
+                chartCtx,
+                chartArea.bottom,
+                "rgba(54, 162, 235, 0.8)",
+                "rgba(255, 206, 86, 0.6)"
+              );
+            },
+            borderColor: "rgba(0, 0, 0, 0.2)",
             borderWidth: 2,
+            borderRadius: 10,
+            hoverBackgroundColor: "rgba(255, 99, 132, 0.9)",
           },
         ],
       },
       options: {
-        responsive: false,
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: {
+          duration: 1000,
+          easing: "easeOutBounce",
+        },
         scales: {
           y: {
+            beginAtZero: true,
+            grid: {
+              color: "rgba(0,0,0,0.1)",
+            },
             ticks: {
               font: {
-                size: 12,
+                size: 14,
               },
               callback: function (value) {
                 return `$ ${value.toLocaleString("es-ES")}`;
               },
             },
           },
+          x: {
+            ticks: {
+              font: {
+                size: 14,
+                weight: "bold",
+              },
+            },
+          },
         },
         plugins: {
           legend: {
-            display: false,
+            display: true,
+            position: "top",
+            labels: {
+              font: {
+                size: 16,
+                weight: "bold",
+              },
+              color: "#333",
+            },
           },
           tooltip: {
+            enabled: true,
+            backgroundColor: "#222",
+            titleFont: {
+              size: 16,
+              weight: "bold",
+              color: "#fff",
+            },
+            bodyFont: {
+              size: 14,
+            },
+            borderColor: "#fff",
+            borderWidth: 2,
             callbacks: {
               label: function (tooltipItem) {
                 return `Total: $ ${tooltipItem.raw.toLocaleString("es-ES")}`;
               },
-            },
-          },
-          datalabels: {
-            display: true,
-            anchor: "end",
-            align: "top",
-            color: "#000",
-            font: {
-              size: 24,
-              weight: "bold",
-            },
-            formatter: function (value) {
-              return `$ ${value.toLocaleString("es-ES")}`;
             },
           },
         },
@@ -334,19 +371,25 @@ app.get("/grafico-barras-categorias", async (req, res) => {
         ],
       },
       options: {
-        responsive: false,
+        responsive: true,
+        maintainAspectRatio: false,
+        layout: {
+          padding: {
+            top: 30,
+          },
+        },
         scales: {
           x: {
             ticks: {
               font: {
-                size: 24,
+                size: 18,
               },
             },
           },
           y: {
             ticks: {
               font: {
-                size: 24,
+                size: 18,
               },
               callback: function (value) {
                 return `$ ${value.toLocaleString("es-ES")}`;
@@ -359,6 +402,9 @@ app.get("/grafico-barras-categorias", async (req, res) => {
             display: false,
           },
           tooltip: {
+            backgroundColor: "rgba(0, 0, 0, 0.8)",
+            titleFont: { size: 16, weight: "bold" },
+            bodyFont: { size: 14 },
             callbacks: {
               label: function (tooltipItem) {
                 return `Total: $ ${tooltipItem.raw.toLocaleString("es-ES")}`;
@@ -371,12 +417,13 @@ app.get("/grafico-barras-categorias", async (req, res) => {
             align: "top",
             color: "#000",
             font: {
-              size: 24,
+              size: 20,
               weight: "bold",
             },
             formatter: function (value) {
               return `$ ${value.toLocaleString("es-ES")}`;
             },
+            offset: -10,
           },
         },
       },
